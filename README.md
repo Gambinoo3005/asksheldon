@@ -61,10 +61,13 @@ When it prints `Logged in as ...`, it's live. Go to your server and type `!ask h
 ## Usage
 
 - `!ask <question>` — ask Sheldon anything (works in any channel it can see, and in DMs)
-- **Reply** to any of Sheldon's messages (Discord's reply feature) to keep the conversation going without typing `!ask`
+- **@mention** Sheldon, or **reply** to one of his messages, to talk without typing `!ask`
 - `!reset` — clears the conversation memory for the current channel
+- `!usage` — token usage and an approximate cost estimate since the last restart
 - `!ping` — latency check
 - `!help` — list commands
+
+There's a 5-second per-user cooldown on AI replies (a ⏳ reaction means you're going too fast).
 
 ## Configuration
 
@@ -74,7 +77,9 @@ All optional settings live in `.env` (see `.env.example`):
 |---|---|---|
 | `DEEPSEEK_MODEL` | `deepseek-v4-flash` | Model to use. `deepseek-v4-pro` is stronger/pricier. |
 | `MAX_HISTORY_TURNS` | `10` | How many recent exchanges per channel the bot remembers. |
-| `MAX_TOKENS` | `800` | Safety cap on reply length (brevity is also enforced in the prompt). |
+| `MAX_TOKENS` | `1200` | Safety cap on reply length. Casual replies stay short via the prompt; this leaves room for real explanations. |
+| `COOLDOWN_SECONDS` | `5` | Per-user cooldown between AI requests (anti-spam). |
+| `PRICE_IN_PER_M` / `PRICE_OUT_PER_M` | `0.14` / `0.28` | Token prices (per 1M) used only for the `!usage` cost estimate. |
 | `DEEPSEEK_THINKING` | `off` | V4 hybrid thinking mode. Off = short/cheap/reliable; `on` = deeper reasoning (slower, pricier). |
 | `COMMAND_PREFIX` | `!` | Prefix for all commands (`!ask`, `!help`, ...). |
 | `SYSTEM_PROMPT` | (Young Sheldon persona) | The bot's personality/instructions. |

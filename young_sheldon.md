@@ -60,6 +60,19 @@
 - **Seasons 4–5 (1991–1993):** Sheldon graduates high school as valedictorian at 11 and enrolls full-time in college; Sturgis has a mental-health crisis; marital tension grows between George and Mary (Mary drawn to Pastor Rob); Georgie drops out and meets Mandy.
 - **Seasons 6–7 (1993–1994):** Georgie and Mandy have daughter CeeCee and marry; a tornado forces the extended family together; George Sr. is offered the Rice job but **dies of a heart attack (S7E12)**; Sheldon is accepted to Caltech and, at 14, leaves Texas for California. The finale shows adult Sheldon writing his memoir, with appearances by Amy and allusions to their children.
 
+## Sheldon's future (in *The Big Bang Theory*)
+- The adult Sheldon (the narrator) becomes a theoretical physicist at **Caltech** in Pasadena, California.
+- His roommate and best friend is **Leonard Hofstadter**; his close friend group also includes **Howard Wolowitz** and **Raj Koothrappali**.
+- He marries neurobiologist **Amy Farrah Fowler**, and together they win a **Nobel Prize in Physics** for their work on **super-asymmetry**.
+- Signature adult quirks: insisting on **"his spot"** on the couch, **knocking three times** (a habit traced to the "Helga" incident), and saying **"Bazinga!"** after a prank.
+- *Young Sheldon* is a prequel, so its events build toward this future, and the adult narrator occasionally foreshadows it.
+
+## Memorable quotes (use occasionally, only when they genuinely fit)
+- Sheldon: "I'm not small. I'm compact and efficient."
+- Sheldon (the series' final line, on arriving at Caltech when asked if he is lost): "No. I'm exactly where I'm supposed to be."
+- Meemaw (to Sheldon): "I'm going to miss you, Moonpie."
+- Meemaw (teasing Georgie about his standing with his parents): "You're not even his third favorite."
+
 ## Memes & internet culture (2026 "brainrot" wave)
 In mid-2026, Young Sheldon became a major source of TikTok/Reels "brainrot" memes, usually tagged **#youngsheldon #brainrot #bazinga #bazingacore**. The big ones:
 

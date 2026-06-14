@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from collections import defaultdict, deque
 
@@ -26,14 +27,26 @@ SYSTEM_PROMPT = os.getenv(
     "most replies should contain none at all. Only very occasionally cap a genuine "
     "joke with 'Bazinga!', and reserve 'I'm not crazy, my mother had me tested.' "
     "for the rare moment someone directly calls you crazy (and not even every "
-    "time). A faint Texas twang is fine. MOST IMPORTANTLY: keep answers SHORT — 1 to 3 sentences whenever "
-    "possible, plain and easy to read. Only write more if the question truly "
-    "requires it, and never pad. Be Sheldon, make your point, then stop.",
+    "time). A faint Texas twang is fine. Do not be a yes-man: when someone's "
+    "premise is flawed, pedantically correct or qualify it instead of just "
+    "agreeing — but concede gracefully when they are right. "
+    "MATCH YOUR LENGTH TO THE QUESTION: for casual chat, banter, memes, or simple "
+    "questions keep it SHORT (1-3 sentences) and never pad; but for a genuine, "
+    "substantive question (explaining a concept, how something works, advice) be "
+    "actually helpful — give a clear, thorough, well-structured explanation with "
+    "analogies and precise terms, teaching it properly in your enthusiastic "
+    "know-it-all way. You love to lecture, so lecture well, but stay on point.",
 )
 # How many prior turns (user + assistant pairs) to remember per channel.
 MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "10"))
-# Hard cap on tokens per reply (safety net; brevity is also enforced in the prompt).
-MAX_TOKENS = int(os.getenv("MAX_TOKENS", "800"))
+# Hard cap on tokens per reply (safety net). Higher cap leaves room for genuine
+# explanations; casual replies stay short via the prompt.
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1200"))
+# Per-user cooldown between AI requests (seconds), to curb spam and runaway cost.
+COOLDOWN_SECONDS = float(os.getenv("COOLDOWN_SECONDS", "5"))
+# Approx DeepSeek V4 Flash pricing per 1M tokens, for the !usage cost estimate.
+PRICE_IN_PER_M = float(os.getenv("PRICE_IN_PER_M", "0.14"))
+PRICE_OUT_PER_M = float(os.getenv("PRICE_OUT_PER_M", "0.28"))
 # DeepSeek V4 is a hybrid model. Thinking mode burns tokens and can return empty
 # content if it hits the cap mid-reasoning, so it's OFF by default for short,
 # cheap, reliable replies. Set DEEPSEEK_THINKING=on to re-enable deeper reasoning.
@@ -85,6 +98,12 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, help_command=
 # channel_id -> rolling window of recent messages (auto-evicts oldest)
 history: dict[int, deque] = defaultdict(lambda: deque(maxlen=MAX_HISTORY_TURNS * 2))
 
+# user_id -> last request time (monotonic), for the per-user cooldown.
+_last_used: dict[int, float] = {}
+
+# Running token usage since startup (resets on restart), for the !usage command.
+usage_stats = {"requests": 0, "prompt": 0, "completion": 0, "total": 0}
+
 
 def split_message(text: str, limit: int = DISCORD_MAX_LEN) -> list[str]:
     """Split a long reply into Discord-sized chunks, preferring line breaks."""
@@ -118,6 +137,10 @@ async def generate_reply(channel_id: int, user_text: str) -> str:
     choice = resp.choices[0]
     finish = choice.finish_reason
     if resp.usage:
+        usage_stats["requests"] += 1
+        usage_stats["prompt"] += resp.usage.prompt_tokens or 0
+        usage_stats["completion"] += resp.usage.completion_tokens or 0
+        usage_stats["total"] += resp.usage.total_tokens or 0
         log.info(
             "finish=%s tokens: prompt=%s completion=%s total=%s",
             finish,
@@ -163,6 +186,17 @@ async def respond(message: discord.Message, question: str):
     question = question.strip()
     if not question:
         return
+
+    # Per-user cooldown to curb spam and runaway cost.
+    now = time.monotonic()
+    if COOLDOWN_SECONDS - (now - _last_used.get(message.author.id, 0.0)) > 0:
+        try:
+            await message.add_reaction("⏳")
+        except discord.HTTPException:
+            pass
+        return
+    _last_used[message.author.id] = now
+
     try:
         async with message.channel.typing():
             reply = await generate_reply(message.channel.id, question)
@@ -200,8 +234,16 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    # If the user replied (Discord's reply feature) to one of Sheldon's own
-    # messages, continue the conversation without needing !ask.
+    # Trigger 1: someone @mentions the bot — answer the rest of their message.
+    if bot.user in message.mentions:
+        text = message.content
+        for m in (f"<@{bot.user.id}>", f"<@!{bot.user.id}>"):
+            text = text.replace(m, "")
+        await respond(message, text)
+        return
+
+    # Trigger 2: someone replied (Discord's reply feature) to one of Sheldon's
+    # own messages — continue the conversation without needing !ask.
     ref = message.reference
     if ref is not None:
         replied = ref.resolved
@@ -214,14 +256,28 @@ async def on_message(message: discord.Message):
             await respond(message, message.content)
 
 
+@bot.command(name="usage")
+async def usage(ctx):
+    u = usage_stats
+    cost = u["prompt"] / 1e6 * PRICE_IN_PER_M + u["completion"] / 1e6 * PRICE_OUT_PER_M
+    await ctx.send(
+        "**Usage since last restart**\n"
+        f"Requests: {u['requests']}\n"
+        f"Tokens — prompt {u['prompt']:,}, completion {u['completion']:,}, "
+        f"total {u['total']:,}\n"
+        f"Approx. cost: ${cost:.4f} (rough estimate; ignores cache discounts)"
+    )
+
+
 @bot.command(name="help")
 async def help_cmd(ctx):
     await ctx.send(
         "**AskSheldon** — your resident genius. Commands:\n"
         "`!ask <question>` — ask me anything\n"
         "`!reset` — wipe my memory of this channel's conversation\n"
+        "`!usage` — token usage and approximate cost so far\n"
         "`!ping` — check my response time\n"
-        "You may also simply *reply* to one of my messages to continue our discourse."
+        "You may also **@mention** me or *reply* to one of my messages to talk without `!ask`."
     )
 
 
