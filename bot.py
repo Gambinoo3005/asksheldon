@@ -50,6 +50,29 @@ if _missing:
         "Set them in a .env file (see .env.example) or your host's dashboard."
     )
 
+
+# Load the Young Sheldon "cheat sheet" (if present) so the bot knows the show.
+def _load_reference() -> str:
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "young_sheldon.md")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+_reference = _load_reference()
+if _reference:
+    SYSTEM_PROMPT += (
+        "\n\n--- REFERENCE: 'Young Sheldon' show facts ---\n"
+        "Use the facts below to answer questions about the show accurately, and "
+        "treat them as authoritative. If a show question isn't covered here, say "
+        "you're not certain rather than inventing details.\n\n" + _reference
+    )
+    log.info("Loaded Young Sheldon reference (%d chars).", len(_reference))
+else:
+    log.info("No young_sheldon.md reference found; running without show cheat sheet.")
+
 # --- Clients -----------------------------------------------------------------
 ai = AsyncOpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
 

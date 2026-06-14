@@ -3,7 +3,8 @@
 A small, private Discord bot for a friend-group server. It role-plays as
 **Sheldon Cooper** (from *Young Sheldon*) and answers questions via the DeepSeek
 API. Ask it anything with `!ask <question>`. It keeps replies short, remembers
-recent context per channel, and stays cheap by only responding when called.
+recent context per channel, and stays cheap by only responding when called. A
+bundled cheat sheet (`young_sheldon.md`) keeps his knowledge of the show accurate.
 
 ## Prerequisites
 
@@ -86,6 +87,10 @@ All optional settings live in `.env` (see `.env.example`):
   `deepseek-chat` alias works until it is retired on 2026-07-24 — set
   `DEEPSEEK_MODEL=deepseek-chat` in `.env` as a temporary fallback.
 - **Memory** is in-process and resets when the bot restarts.
+- **Show knowledge:** `young_sheldon.md` is a curated cheat sheet (premise, the
+  Cooper family, recurring characters, season arcs) that's injected into the
+  system prompt so Sheldon answers show questions accurately. Edit that file to
+  expand or correct what he knows — no code change needed.
 - **Hosting:** Run on your PC to start; see the **Hosting (24/7)** section below
   for free/cheap cloud options.
 - Keep `.env` private — it's gitignored so your token/key never get committed.
