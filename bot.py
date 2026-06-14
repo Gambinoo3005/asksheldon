@@ -30,6 +30,13 @@ SYSTEM_PROMPT = os.getenv(
 )
 # How many prior turns (user + assistant pairs) to remember per channel.
 MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "10"))
+# Hard cap on tokens per reply (safety net; brevity is also enforced in the prompt).
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "800"))
+# DeepSeek V4 is a hybrid model. Thinking mode burns tokens and can return empty
+# content if it hits the cap mid-reasoning, so it's OFF by default for short,
+# cheap, reliable replies. Set DEEPSEEK_THINKING=on to re-enable deeper reasoning.
+THINKING = os.getenv("DEEPSEEK_THINKING", "off").lower() in ("1", "true", "on", "yes")
+EXTRA_BODY = {"thinking": {"type": "enabled" if THINKING else "disabled"}}
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!")
 DISCORD_MAX_LEN = 2000
 
@@ -80,18 +87,28 @@ async def generate_reply(channel_id: int, user_text: str) -> str:
         model=DEEPSEEK_MODEL,
         messages=messages,
         temperature=0.7,
-        max_tokens=500,
+        max_tokens=MAX_TOKENS,
+        extra_body=EXTRA_BODY,
     )
+    choice = resp.choices[0]
+    finish = choice.finish_reason
     if resp.usage:
         log.info(
-            "tokens: prompt=%s completion=%s total=%s",
+            "finish=%s tokens: prompt=%s completion=%s total=%s",
+            finish,
             resp.usage.prompt_tokens,
             resp.usage.completion_tokens,
             resp.usage.total_tokens,
         )
-    reply = (resp.choices[0].message.content or "").strip()
+
+    reply = (choice.message.content or "").strip()
     if not reply:
-        reply = "(The model returned an empty response — try rephrasing?)"
+        # No visible answer — explain why, and don't store the dud in memory.
+        if finish == "content_filter":
+            return "That topic is off-limits, even for someone of my intellect. Next question."
+        if finish == "length":
+            return "I ran out of room before finishing my thought. Ask me something narrower."
+        return "Curious. I have no response to that — try rephrasing."
 
     convo.append({"role": "user", "content": user_text})
     convo.append({"role": "assistant", "content": reply})
@@ -116,29 +133,60 @@ async def ping(ctx):
     await ctx.send(f"Pong! {round(bot.latency * 1000)}ms")
 
 
-@bot.command(name="ask")
-async def ask(ctx, *, question: str = ""):
-    """Ask the AI a question: !ask <your question>"""
+async def respond(message: discord.Message, question: str):
+    """Generate an answer to `question` and post it as a reply to `message`."""
     question = question.strip()
     if not question:
-        await ctx.send("Usage: `!ask <your question>`")
         return
-
     try:
-        async with ctx.typing():
-            reply = await generate_reply(ctx.channel.id, question)
+        async with message.channel.typing():
+            reply = await generate_reply(message.channel.id, question)
     except Exception:
         log.exception("DeepSeek request failed")
-        await ctx.reply(
+        await message.reply(
             "⚠️ Sorry, I hit an error talking to the AI. Try again in a moment.",
             mention_author=False,
         )
         return
 
     chunks = split_message(reply)
-    await ctx.reply(chunks[0], mention_author=False)
+    await message.reply(chunks[0], mention_author=False)
     for chunk in chunks[1:]:
-        await ctx.channel.send(chunk)
+        await message.channel.send(chunk)
+
+
+@bot.command(name="ask")
+async def ask(ctx, *, question: str = ""):
+    """Ask the AI a question: !ask <your question>"""
+    if not question.strip():
+        await ctx.send("Usage: `!ask <your question>`")
+        return
+    await respond(ctx.message, question)
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    # Ignore our own and other bots' messages (prevents reply loops).
+    if message.author.bot:
+        return
+
+    # Commands like !ask / !reset / !help still take priority.
+    if message.content.startswith(COMMAND_PREFIX):
+        await bot.process_commands(message)
+        return
+
+    # If the user replied (Discord's reply feature) to one of Sheldon's own
+    # messages, continue the conversation without needing !ask.
+    ref = message.reference
+    if ref is not None:
+        replied = ref.resolved
+        if not isinstance(replied, discord.Message):
+            try:
+                replied = await message.channel.fetch_message(ref.message_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                replied = None
+        if isinstance(replied, discord.Message) and replied.author.id == bot.user.id:
+            await respond(message, message.content)
 
 
 @bot.command(name="help")
@@ -147,7 +195,8 @@ async def help_cmd(ctx):
         "**AskSheldon** — your resident genius. Commands:\n"
         "`!ask <question>` — ask me anything\n"
         "`!reset` — wipe my memory of this channel's conversation\n"
-        "`!ping` — check my response time"
+        "`!ping` — check my response time\n"
+        "You may also simply *reply* to one of my messages to continue our discourse."
     )
 
 

@@ -60,6 +60,7 @@ When it prints `Logged in as ...`, it's live. Go to your server and type `!ask h
 ## Usage
 
 - `!ask <question>` — ask Sheldon anything (works in any channel it can see, and in DMs)
+- **Reply** to any of Sheldon's messages (Discord's reply feature) to keep the conversation going without typing `!ask`
 - `!reset` — clears the conversation memory for the current channel
 - `!ping` — latency check
 - `!help` — list commands
@@ -72,6 +73,8 @@ All optional settings live in `.env` (see `.env.example`):
 |---|---|---|
 | `DEEPSEEK_MODEL` | `deepseek-v4-flash` | Model to use. `deepseek-v4-pro` is stronger/pricier. |
 | `MAX_HISTORY_TURNS` | `10` | How many recent exchanges per channel the bot remembers. |
+| `MAX_TOKENS` | `800` | Safety cap on reply length (brevity is also enforced in the prompt). |
+| `DEEPSEEK_THINKING` | `off` | V4 hybrid thinking mode. Off = short/cheap/reliable; `on` = deeper reasoning (slower, pricier). |
 | `COMMAND_PREFIX` | `!` | Prefix for all commands (`!ask`, `!help`, ...). |
 | `SYSTEM_PROMPT` | (Young Sheldon persona) | The bot's personality/instructions. |
 
