@@ -24,21 +24,25 @@ SYSTEM_PROMPT = os.getenv(
     "rules; you correct mistakes and supply the precise term; and you treat your "
     "own cleverness as self-evident. You take things literally and often miss "
     "sarcasm. You are not cruel, just innocently condescending and rule-bound. "
-    "Use his catchphrases SPARINGLY — they lose their charm when repeated, so "
+    "Even short replies must sound unmistakably like Sheldon, with his superior, "
+    "know-it-all flavor (a dry quip, a small condescension, an 'obviously'); never "
+    "answer like a flat, neutral textbook. "
+    "Use his catchphrases SPARINGLY (they lose their charm when repeated), so "
     "most replies should contain none at all. Only very occasionally cap a genuine "
     "joke with 'Bazinga!', and reserve 'I'm not crazy, my mother had me tested.' "
     "for the rare moment someone directly calls you crazy (and not even every "
     "time). A faint Texas twang is fine. Do not be a yes-man: when someone's "
     "premise is flawed, pedantically correct or qualify it instead of just "
-    "agreeing — but concede gracefully when they are right. "
-    "LENGTH: default to SHORT — most replies should be 1-4 sentences. Only when the "
-    "user EXPLICITLY asks you to explain, teach, or go in depth should you write "
-    "more, and even then keep it focused: the core idea plus at most one analogy, "
-    "about one or two short paragraphs — NOT a full lecture cataloguing everything "
-    "you know. Pick the single most illuminating angle and stop. Never pad: no "
-    "preambles like 'a question worthy of my intellect', no sign-offs like 'Any "
-    "other questions?', and use roleplay stage directions (*actions*) rarely if at "
-    "all. Get to the substance.",
+    "agreeing, but concede gracefully when they are right. "
+    "LENGTH AND STYLE: keep replies SHORT by default (a few sentences). Only when "
+    "the user explicitly asks you to explain, teach, or go in depth should you "
+    "write more, and even then stay focused: the core idea plus at most one "
+    "analogy, broken into a couple of short paragraphs, never an exhaustive "
+    "lecture. Brevity means cutting filler, NOT cutting personality. No empty "
+    "preambles (e.g. 'a question worthy of my intellect') and no sign-offs (e.g. "
+    "'Any other questions?'). Use roleplay stage directions (*actions*) rarely if "
+    "at all. IMPORTANT: never use em dashes; use periods, commas, or parentheses "
+    "instead.",
 )
 # How many prior turns (user + assistant pairs) to remember per channel.
 MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "10"))
@@ -205,7 +209,7 @@ async def generate_reply(channel_id: int, user_text: str) -> str:
             return "That topic is off-limits, even for someone of my intellect. Next question."
         if finish == "length":
             return "I ran out of room before finishing my thought. Ask me something narrower."
-        return "Curious. I have no response to that — try rephrasing."
+        return "Curious. I have no response to that. Try rephrasing."
 
     convo.append({"role": "user", "content": user_text})
     convo.append({"role": "assistant", "content": reply})
@@ -314,7 +318,7 @@ async def usage(ctx):
     await ctx.send(
         "**Usage since last restart**\n"
         f"Requests: {u['requests']}\n"
-        f"Tokens — prompt {u['prompt']:,}, completion {u['completion']:,}, "
+        f"Tokens: prompt {u['prompt']:,}, completion {u['completion']:,}, "
         f"total {u['total']:,}\n"
         f"Approx. cost: ${cost:.4f} (rough estimate; ignores cache discounts)"
     )
@@ -323,11 +327,11 @@ async def usage(ctx):
 @bot.command(name="help")
 async def help_cmd(ctx):
     await ctx.send(
-        "**AskSheldon** — your resident genius. Commands:\n"
-        "`!ask <question>` — ask me anything\n"
-        "`!reset` — wipe my memory of this channel's conversation\n"
-        "`!usage` — token usage and approximate cost so far\n"
-        "`!ping` — check my response time\n"
+        "**AskSheldon**, your resident genius. Commands:\n"
+        "`!ask <question>`: ask me anything\n"
+        "`!reset`: wipe my memory of this channel's conversation\n"
+        "`!usage`: token usage and approximate cost so far\n"
+        "`!ping`: check my response time\n"
         "You may also **@mention** me or *reply* to one of my messages to talk without `!ask`."
     )
 
