@@ -91,7 +91,7 @@ All optional settings live in `.env` (see `.env.example`):
 - **Model names:** If `deepseek-v4-flash` ever errors as not found, the legacy
   `deepseek-chat` alias works until it is retired on 2026-07-24 — set
   `DEEPSEEK_MODEL=deepseek-chat` in `.env` as a temporary fallback.
-- **Memory** is in-process and resets when the bot restarts.
+- **Memory & usage persistence:** conversation memory and `!usage` totals are saved to `asksheldon_state.json` in `DATA_DIR`. Set `DATA_DIR` to a mounted volume (see *Persistent memory on Railway* below) so they survive restarts; without it, state resets on each restart/redeploy.
 - **Show knowledge:** `young_sheldon.md` is a curated cheat sheet (premise, the
   Cooper family, recurring characters, season arcs) that's injected into the
   system prompt so Sheldon answers show questions accurately. Edit that file to
@@ -126,3 +126,11 @@ Options, roughly easiest -> most-free:
 For any cloud host, set your two secrets as environment variables in its
 dashboard instead of committing `.env`. The code reads real env vars
 automatically (`load_dotenv()` is a no-op when there's no `.env` file).
+
+### Persistent memory on Railway
+By default the bot stores conversation memory and usage stats in a JSON file next
+to the code — which gets wiped on every redeploy. To make it persist:
+1. In your Railway service, add a **Volume** and set its **mount path** to `/data`.
+2. Add an environment variable **`DATA_DIR=/data`**.
+3. Redeploy. The bot writes `asksheldon_state.json` to the volume and reloads it on startup
+   (look for `Loaded persisted state: ...` in the logs).

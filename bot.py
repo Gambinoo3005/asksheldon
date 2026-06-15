@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import logging
 from collections import defaultdict, deque
@@ -54,6 +55,11 @@ THINKING = os.getenv("DEEPSEEK_THINKING", "off").lower() in ("1", "true", "on", 
 EXTRA_BODY = {"thinking": {"type": "enabled" if THINKING else "disabled"}}
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!")
 DISCORD_MAX_LEN = 2000
+# Directory for persistent state (memory + usage). On Railway, mount a Volume and
+# set DATA_DIR to its path (e.g. /data) so state survives restarts. Defaults to
+# the bot's own folder (fine locally; ephemeral on most cloud hosts).
+DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
+STATE_FILE = os.path.join(DATA_DIR, "asksheldon_state.json")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("asksheldon")
@@ -101,8 +107,49 @@ history: dict[int, deque] = defaultdict(lambda: deque(maxlen=MAX_HISTORY_TURNS *
 # user_id -> last request time (monotonic), for the per-user cooldown.
 _last_used: dict[int, float] = {}
 
-# Running token usage since startup (resets on restart), for the !usage command.
+# Running token usage, for the !usage command (persisted to disk; see save_state).
 usage_stats = {"requests": 0, "prompt": 0, "completion": 0, "total": 0}
+
+
+def save_state() -> None:
+    """Persist conversation memory and usage to disk (atomic write)."""
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        data = {
+            "history": {str(cid): list(dq) for cid, dq in history.items()},
+            "usage": usage_stats,
+        }
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        os.replace(tmp, STATE_FILE)
+    except OSError:
+        log.exception("Failed to save state to %s", STATE_FILE)
+
+
+def load_state() -> None:
+    """Load persisted memory and usage from disk, if present."""
+    try:
+        with open(STATE_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return
+    except (OSError, ValueError):
+        log.exception("Failed to load state from %s", STATE_FILE)
+        return
+    for cid, items in data.get("history", {}).items():
+        history[int(cid)] = deque(items, maxlen=MAX_HISTORY_TURNS * 2)
+    for key, value in data.get("usage", {}).items():
+        if key in usage_stats:
+            usage_stats[key] = value
+    log.info(
+        "Loaded persisted state: %d channel(s), %d request(s).",
+        len(data.get("history", {})),
+        usage_stats["requests"],
+    )
+
+
+load_state()
 
 
 def split_message(text: str, limit: int = DISCORD_MAX_LEN) -> list[str]:
@@ -160,6 +207,7 @@ async def generate_reply(channel_id: int, user_text: str) -> str:
 
     convo.append({"role": "user", "content": user_text})
     convo.append({"role": "assistant", "content": reply})
+    save_state()
     return reply
 
 
@@ -173,6 +221,7 @@ async def on_ready():
 async def reset(ctx):
     """Clear the conversation memory for this channel."""
     history.pop(ctx.channel.id, None)
+    save_state()
     await ctx.send("🧹 Conversation memory cleared for this channel.")
 
 

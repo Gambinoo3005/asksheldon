@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+asksheldon_state.json
+asksheldon_state.json.tmp
