@@ -77,7 +77,7 @@ All optional settings live in `.env` (see `.env.example`):
 |---|---|---|
 | `DEEPSEEK_MODEL` | `deepseek-v4-flash` | Model to use. `deepseek-v4-pro` is stronger/pricier. |
 | `MAX_HISTORY_TURNS` | `10` | How many recent exchanges per channel the bot remembers. |
-| `MAX_TOKENS` | `1200` | Safety cap on reply length. Casual replies stay short via the prompt; this leaves room for real explanations. |
+| `MAX_TOKENS` | `600` | Safety cap on reply length. Keeps even "explain" answers from becoming essays. |
 | `COOLDOWN_SECONDS` | `5` | Per-user cooldown between AI requests (anti-spam). |
 | `PRICE_IN_PER_M` / `PRICE_OUT_PER_M` | `0.14` / `0.28` | Token prices (per 1M) used only for the `!usage` cost estimate. |
 | `DEEPSEEK_THINKING` | `off` | V4 hybrid thinking mode. Off = short/cheap/reliable; `on` = deeper reasoning (slower, pricier). |

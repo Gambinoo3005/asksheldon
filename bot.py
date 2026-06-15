@@ -31,18 +31,20 @@ SYSTEM_PROMPT = os.getenv(
     "time). A faint Texas twang is fine. Do not be a yes-man: when someone's "
     "premise is flawed, pedantically correct or qualify it instead of just "
     "agreeing — but concede gracefully when they are right. "
-    "MATCH YOUR LENGTH TO THE QUESTION: for casual chat, banter, memes, or simple "
-    "questions keep it SHORT (1-3 sentences) and never pad; but for a genuine, "
-    "substantive question (explaining a concept, how something works, advice) be "
-    "actually helpful — give a clear, thorough, well-structured explanation with "
-    "analogies and precise terms, teaching it properly in your enthusiastic "
-    "know-it-all way. You love to lecture, so lecture well, but stay on point.",
+    "LENGTH: default to SHORT — most replies should be 1-4 sentences. Only when the "
+    "user EXPLICITLY asks you to explain, teach, or go in depth should you write "
+    "more, and even then keep it focused: the core idea plus at most one analogy, "
+    "about one or two short paragraphs — NOT a full lecture cataloguing everything "
+    "you know. Pick the single most illuminating angle and stop. Never pad: no "
+    "preambles like 'a question worthy of my intellect', no sign-offs like 'Any "
+    "other questions?', and use roleplay stage directions (*actions*) rarely if at "
+    "all. Get to the substance.",
 )
 # How many prior turns (user + assistant pairs) to remember per channel.
 MAX_HISTORY_TURNS = int(os.getenv("MAX_HISTORY_TURNS", "10"))
-# Hard cap on tokens per reply (safety net). Higher cap leaves room for genuine
-# explanations; casual replies stay short via the prompt.
-MAX_TOKENS = int(os.getenv("MAX_TOKENS", "1200"))
+# Hard cap on tokens per reply (safety net). Keeps even an "explain" answer from
+# becoming an essay; casual replies stay short via the prompt.
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "600"))
 # Per-user cooldown between AI requests (seconds), to curb spam and runaway cost.
 COOLDOWN_SECONDS = float(os.getenv("COOLDOWN_SECONDS", "5"))
 # Approx DeepSeek V4 Flash pricing per 1M tokens, for the !usage cost estimate.
